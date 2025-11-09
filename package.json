@@ -1,0 +1,45 @@
+{
+  "name": "turbopack-unocss-transform",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "vizet <v@kogita.net>",
+  "description": "A Turbopack loader for Next.js that applies UnoCSS transformers (like variant-group and attributify-jsx) directly to your TS/JS/TSX/JSX source before CSS generation.",
+  "homepage": "https://github.com/vizet/turbopack-unocss-transform",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vizet/turbopack-unocss-transform.git"
+  },
+  "keywords": [
+    "nextjs",
+    "turbopack",
+    "unocss",
+    "postcss",
+    "loader",
+    "transform",
+    "transformer",
+    "transformers",
+    "attributify",
+    "attributify-jsx"
+  ],
+  "type": "module",
+  "main": "dist/loader.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./loader": "./dist/loader.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "unocss": ">=0.58.0"
+  },
+  "dependencies": {
+    "jiti": "^1.21.0",
+    "magic-string": "^0.30.10",
+    "next": "^16.0.1",
+    "tsconfig-paths": "^4.2.0"
+  }
+}
