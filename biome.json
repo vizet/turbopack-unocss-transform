@@ -1,0 +1,82 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "none",
+      "bracketSpacing": false,
+      "bracketSameLine": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "useExhaustiveDependencies": "info",
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noConsole": "info",
+        "noDebugger": "error",
+        "noDoubleEquals": "error",
+        "noEmptyBlockStatements": "error",
+        "noShadowRestrictedNames": "info"
+      },
+      "style": {
+        "noUnusedTemplateLiteral": "error",
+        "useImportType": "error",
+        "useConst": "warn",
+        "noInferrableTypes": "error",
+        "useExportType": "error",
+        "noNonNullAssertion": "warn",
+        "noParameterAssign": "error",
+        "useTemplate": "error",
+        "noUselessElse": "error",
+        "useSelfClosingElements": "error",
+        "useFragmentSyntax": "error"
+      },
+      "complexity": {
+        "noUselessFragments": "error",
+        "useFlatMap": "warn",
+        "useSimplifiedLogicExpression": "warn",
+        "useOptionalChain": "warn"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
+      },
+      "a11y": {
+        "useAltText": "warn"
+      },
+      "security": {
+        "noBlankTarget": "error"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

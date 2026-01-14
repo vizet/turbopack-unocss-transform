@@ -1,21 +1,10 @@
-import path from "node:path"
-import {fileURLToPath} from "node:url"
+const path = require("node:path")
 
 function getLoaderPath() {
-  try {
-    const __filename = fileURLToPath(import.meta.url)
-    const __dirname = path.dirname(__filename)
-
-    return path.resolve(__dirname, "loader.mjs")
-  } catch {
-    return path.resolve(
-      process.cwd(),
-      "node_modules/turbopack-unocss-transform/dist/loader.mjs"
-    )
-  }
+  return path.resolve(__dirname, "loader.mjs")
 }
 
-export default function withUnoTransform(userConfig = {}) {
+function withUnoTransform(userConfig = {}) {
   const loaderPath = getLoaderPath()
 
   const base = {
@@ -56,3 +45,6 @@ function mergeInto(t, s) {
     }
   }
 }
+
+module.exports = withUnoTransform
+module.exports.default = withUnoTransform
