@@ -1,6 +1,6 @@
 {
   "name": "turbopack-unocss-transform",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "MIT",
   "author": "vizet <v@kogita.net>",
   "description": "A Turbopack loader for Next.js that applies UnoCSS transformers (like variant-group and attributify-jsx) directly to your TS/JS/TSX/JSX source before CSS generation.",
