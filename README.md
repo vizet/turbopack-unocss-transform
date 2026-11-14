@@ -1,141 +1,176 @@
 # turbopack-unocss-transform
 
-Turbopack loader for Next.js that applies UnoCSS transformers (`transformerAttributifyJsx`, `transformerVariantGroup`, `transformerDirectives`) to source files.
+UnoCSS transformers for Next.js. Variant groups, attributify JSX and compile class work with Turbopack and with webpack.
 
-`@unocss/postcss` handles CSS generation; this loader transforms JS/TS/JSX/TSX source code.
+`@unocss/postcss` alone generates CSS from your source files as they are on disk. It never runs transformers, so `hover:(bg-red-500 text-white)` is neither rewritten in the bundle nor present in the CSS. This package runs the transformers from your `uno.config.ts` in both places:
+
+- a loader rewrites your source modules while Next.js compiles them;
+- a PostCSS plugin extracts classes from the same transformed code, then hands `@apply`, `@screen` and `theme()` to `@unocss/postcss`.
 
 ## Requirements
 
-| Dependency | Version                                                            |
-| ---------- | ------------------------------------------------------------------ |
-| Node.js    | **≥23.6.0** (native TypeScript support if you use `uno.config.ts`) |
-| Next.js    | ≥15.0.0                                                            |
-| UnoCSS     | ≥66.0.0                                                            |
+| Dependency | Version |
+| --- | --- |
+| Next.js | ≥16.0.0 |
+| UnoCSS (`unocss`, `@unocss/postcss`) | ≥66.5.0 |
+| Node.js | ^20.19.0 or ≥22.12.0 |
 
-## Installation
+## Install
 
 ```bash
-pnpm add -D turbopack-unocss-transform @unocss/postcss
+pnpm add -D unocss @unocss/postcss turbopack-unocss-transform
 ```
+
+Keep `unocss` and `@unocss/postcss` on the same version. The package takes `@unocss/core` and `@unocss/config` from your `@unocss/postcss` installation, so it always runs the UnoCSS version you installed.
 
 ## Setup
 
-### 1. next.config.ts
-
-```typescript
+```ts
+// next.config.ts
 import type {NextConfig} from "next"
-import withUnoTransform from "turbopack-unocss-transform"
+import withUnoCSS from "turbopack-unocss-transform"
 
-const nextConfig: NextConfig = withUnoTransform({
-  // your config
-})
+const nextConfig: NextConfig = {}
 
-export default nextConfig
+export default withUnoCSS(nextConfig)
 ```
 
-### 2. postcss.config.mjs
-
-> [!IMPORTANT]
-> **Import the config object, not a path string.** Passing a string or without the `configOrPath` setting disables HMR - Turbopack won't detect config changes.
-
-```javascript
-import config from "./uno.config.ts"
-
+```js
+// postcss.config.mjs
 export default {
-  plugins: [
-    ["@unocss/postcss", {configOrPath: config}]
-  ]
+  plugins: ["turbopack-unocss-transform/postcss"]
 }
 ```
 
-### 3. tsconfig.json
+```ts
+// uno.config.ts
+import {
+  defineConfig,
+  presetAttributify,
+  presetWind4,
+  transformerAttributifyJsx,
+  transformerCompileClass,
+  transformerVariantGroup
+} from "unocss"
 
-> [!IMPORTANT]
-> **Required.** Node.js 23+ executes TypeScript natively but requires explicit `.ts` extensions in imports. This flag allows TypeScript to accept them.
-
-```json
-{
-  "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
-}
-```
-
-### 4. uno.config.ts
-
-> [!WARNING]
-> **All local imports must include `.ts` extension.** PostCSS runs via Node.js worker (not Turbopack), which requires explicit extensions for TypeScript files.
-
-```typescript
-import type {UserConfig} from "@unocss/core"
-import {presetAttributify} from "@unocss/preset-attributify"
-import {presetWind4} from "@unocss/preset-wind4"
-import transformerAttributifyJsx from "@unocss/transformer-attributify-jsx"
-import transformerDirectives from "@unocss/transformer-directives"
-import transformerVariantGroup from "@unocss/transformer-variant-group"
-import theme from "./src/styles/theme/index.ts"
-import preflights from "./src/styles/theme/preflights.ts"
-
-export default {
+export default defineConfig({
   presets: [presetWind4(), presetAttributify()],
   transformers: [
     transformerAttributifyJsx(),
-    transformerDirectives(),
-    transformerVariantGroup()
-  ],
-  theme,
-  preflights
-} satisfies UserConfig
+    transformerVariantGroup(),
+    transformerCompileClass()
+  ]
+})
 ```
 
-> [!CAUTION]
-> **Avoid importing from the `unocss` meta-package.** It re-exports all presets including `@unocss/preset-icons`, which depends on `mlly` that uses dynamic `import(dataURL)` - not supported by Turbopack.
->
-> This will fail:
->
-> ```typescript
-> import {defineConfig, presetWind4} from "unocss" // ❌ Pulls in mlly
-> ```
->
-> Use separate packages instead:
->
-> ```typescript
-> import {presetWind4} from "@unocss/preset-wind4" // ✅
-> ```
->
-> You can try the meta-package - it might work in future versions, but this setup was tested with separate packages only.
-
-### 5. Global styles (e.g., global.sass)
-
-```sass
-@unocss all
-
-html, body
-  @apply text-dark font-sans
+```css
+/* app/globals.css */
+@unocss all;
 ```
 
-## Why explicit `.ts` extensions?
+The config is a regular UnoCSS config, loaded by UnoCSS's own loader and never bundled by Turbopack. Imports from `unocss`, local imports with or without a file extension and JSON imports work, and `defineConfig` is optional.
 
-PostCSS config is executed by a **Node.js worker**, not Turbopack. Node.js 23+ runs TypeScript natively but doesn't resolve `.ts` extensions automatically — they must be explicit.
+`withUnoCSS` also accepts a function that returns the Next.js config.
 
-Without explicit extensions:
+## What you get
 
+```tsx
+<div className="hover:(bg-red-500 text-white)" />
+// <div class="hover:bg-red-500 hover:text-white">
+
+<div flex items-center />
+// <div flex="" items-center="">
+
+<div className=":uno: text-center sm:text-left p-3" />
+// <div class="uno-lwhhx5">
+
+<p>hover:(bg-red-500 text-white)</p>
+// <p>hover:(bg-red-500 text-white)</p>
 ```
-Module not found: Can't resolve './src/styles/theme'
+
+The CSS for every rewritten class is generated. JSX text is never rewritten. Sass, including the indented syntax, works because the PostCSS plugin runs after the preprocessor.
+
+Changes are picked up without restarting `next dev`:
+
+- a class added to or removed from a source file;
+- a new or deleted source file;
+- an edit to `uno.config.ts`;
+- an edit to a file that the config imports with a relative path, at any depth.
+
+A file the config reads in another way is watched when you list it in `configDeps`:
+
+```ts
+export default defineConfig({
+  configDeps: ["./tokens.yaml"]
+})
 ```
 
-## HMR behavior
+## Config file
 
-| postcss.config.mjs                     | HMR      |
-| -------------------------------------- | -------- |
-| `import config from "./uno.config.ts"` | ✅ Works  |
-| `{configOrPath: "./uno.config.ts"}`    | ❌ No HMR |
+`uno.config.*` and `unocss.config.*` in the project root are found automatically. For any other location, set `configFile` in `next.config`. The PostCSS plugin picks the same path up.
 
-When using path string, Turbopack doesn't track `uno.config.ts` as a dependency — changes require `next dev` restart.
+```ts
+export default withUnoCSS(nextConfig, {
+  configFile: "./config/uno.config.ts"
+})
+```
+
+| Config | Works | Edits picked up without a restart |
+| --- | --- | --- |
+| `uno.config.ts`, `uno.config.mts`, `unocss.config.ts` | yes | yes |
+| `uno.config.js` in a package without `"type": "module"` | yes | yes |
+| `uno.config.mjs`, `uno.config.cjs`, `uno.config.js` with `"type": "module"` | yes | no |
+| `configFile` with a relative or an absolute path, any file name | yes | yes |
+| `configFile` outside the Next.js project directory | with `turbopack.root` set to a directory that contains it | not tested |
+
+Limits that come from the UnoCSS config loader:
+
+- Node.js caches `.mjs` and `.cjs` modules, so a config in one of those formats is read once per `next dev` run. Use `uno.config.ts` to have edits applied.
+- Imports through `tsconfig.json` path aliases (`@/styles/theme`) are not resolved. Use relative imports in the config.
+
+## Which files are transformed
+
+The package follows the UnoCSS pipeline rules, the same ones the Vite plugin uses.
+
+- By default only `.jsx` and `.tsx` modules are transformed. A plain `.ts` or `.js` module is transformed when it contains `// @unocss-include`, or when `content.pipeline.include` matches it:
+
+  ```ts
+  export default defineConfig({
+    content: {
+      pipeline: {
+        include: [/\.[jt]sx?$/]
+      }
+    }
+  })
+  ```
+
+- A file containing `@unocss-ignore` is left alone.
+- Code between `@unocss-skip-start` and `@unocss-skip-end` comments is left alone:
+
+  ```tsx
+  {/* @unocss-skip-start */}
+  <input placeholder="font-(light mono)" />
+  {/* @unocss-skip-end */}
+  ```
+
+Transformers rewrite string literals and JSX attributes wherever they are, because a class list can live in any of them. JSX text is the exception: it is displayed, never used as a class list, so it stays as written. Use the skip comments for an attribute or a string constant that must stay as written.
+
+`content.filesystem` decides which files are scanned for classes, as with `@unocss/postcss`. Its globs are relative to the project root.
+
+## Migrating from 1.x
+
+1. In `postcss.config.mjs`, replace the `@unocss/postcss` entry with `"turbopack-unocss-transform/postcss"` and remove the `import config from "./uno.config.ts"` line.
+2. `next.config.ts` stays as it is.
+3. Plain `.ts` and `.js` modules are no longer transformed by default. See "Which files are transformed".
+4. `.ts` extensions in config imports, `allowImportingTsExtensions` and Node.js 23 are no longer required, and the config may import from `unocss`.
+5. Next.js 15 is no longer supported.
+
+## Known issues
+
+- With `next build --webpack`, webpack prints a cache warning about a dynamic `import()` in this package. The build is not affected.
 
 ## Tested with
 
-- Next.js **16.1.3**
-- UnoCSS **66.5.6**
-- Node.js **23.11.0**
+- Turbopack: Next.js 16.4.6 with UnoCSS 66.5.6, 66.12.0 and 66.13.0
+- webpack: Next.js 16.4.6 with UnoCSS 66.13.0
+- Node.js 26.4.0
