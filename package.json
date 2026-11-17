@@ -1,6 +1,6 @@
 {
   "name": "turbopack-unocss-transform",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "author": "vizet <v@kogita.net>",
   "description": "UnoCSS transformers for Next.js: variant groups, attributify JSX and compile class with Turbopack and webpack.",

@@ -187,6 +187,19 @@ const pickLayers = (
   return generated.getLayers(undefined, emitted) ?? ""
 }
 
+const queues = new WeakMap<object, Promise<void>>()
+
+const exclusive = (key: object, run: () => Promise<void>) => {
+  const next = (queues.get(key) ?? Promise.resolve()).then(run, run)
+
+  queues.set(
+    key,
+    next.catch(() => undefined)
+  )
+
+  return next
+}
+
 export const createPlugin = (options: Options = {}) => {
   const root = process.cwd()
   const configFile = options.configFile ?? process.env[CONFIG_FILE_ENV]
@@ -231,6 +244,9 @@ export const createPlugin = (options: Options = {}) => {
     }
 
     const tokens = await collect(context, cache, files)
+
+    await context.uno.setConfig(context.uno.userConfig)
+
     const generated = await context.uno.generate([...tokens].sort())
     const emitted: string[] = []
 
@@ -251,14 +267,16 @@ export const createPlugin = (options: Options = {}) => {
 
     for (const file of context.sources) depend(helpers.result, file)
 
-    await generate(css, helpers, context)
+    await exclusive(context.uno, async () => {
+      await generate(css, helpers, context)
 
-    if (!directives || revision !== context.revision) {
-      official ??= importOfficial(root)
-      directives = await createDirectives(official, context)
-      revision = context.revision
-    }
+      if (!directives || revision !== context.revision) {
+        official ??= importOfficial(root)
+        directives = await createDirectives(official, context)
+        revision = context.revision
+      }
 
-    await directives(css, helpers.result)
+      await directives(css, helpers.result)
+    })
   }
 }
